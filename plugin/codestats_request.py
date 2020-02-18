@@ -100,7 +100,6 @@ def send_xp():
     # after lock is released we can send the payload
     utc_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond = 0).astimezone().isoformat()
     pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
-    print(url, headers, pulse_json)
     requests.post(url = url, data = pulse_json, headers = headers)
 
 def running_thread():
