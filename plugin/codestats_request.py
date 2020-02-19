@@ -47,72 +47,85 @@ filetype_map = {
 
 BETA_URL = 'https://beta.codestats.net'
 INTERVAL = 10
-sem = threading.Semaphore()
-xp_dict = { }
-timer = None
+SLEEP_INTERVAL = 0.1
 
-def get_xp_list(xp_dict):
-    xp_list = []
-    for (ft, xp) in xp_dict.items():
-        xp_list.append(dict(language=ft, xp=xp))
-    return xp_list
+# semaphore needed to protect the dictionary
 
-def add_xp(filetype, xp):
-    # get the langauge type based on what vim passed to us
-    language_type = filetype_map.get(filetype, None)
-    if language_type is None or xp == 0:
-        return
+class CodeStats():
+    def __init__(self, xp_dict):
+        self.xp_dict = xp_dict 
+        self.sem = threading.Semaphore()
 
-    # insert the filetype into the dictionary.  Just try
-    # and acquire the lock and if we can we can try again 
-    # later
-    if sem.acquire(blocking = False) == True:
-        count = xp_dict.setdefault(language_type, 0)
-        xp_dict[language_type] = count + xp
-        sem.release()
+        # start the main thread
+        self.cs_thread = threading.Thread(target = self.main_thread, args = (), daemon = True)
+        self.cs_thread.start()
 
-def send_xp():
-    global xp_dict
-    if len(xp_dict) == 0:
-        return
+    def add_xp(self, filetype, xp):
+        # get the langauge type based on what vim passed to us
+        language_type = filetype_map.get(filetype, None)
+        if language_type is None or xp == 0:
+            return
 
-    # acquire the lock to get the list of xp to send
-    sem.acquire()
-    xp_list = get_xp_list(xp_dict)
-    xp_dict = { }
-    sem.release()
+        # insert the filetype into the dictionary.  Just try
+        # and acquire the lock and if we can we can try again 
+        # later
+        if self.sem.acquire(blocking = False) == True:
+            count = self.xp_dict.setdefault(language_type, 0)
+            self.xp_dict[language_type] = count + xp
+            self.sem.release()
 
-    url = vim.eval("g:vim_codestats_url")
-    if url is None:
-        return
+    def send_xp(self):
+        if len(self.xp_dict) == 0:
+            return
 
-    if url.endswith('/') == False:
-        url = url + '/'
-    url = url + 'api/my/pulses'
-    machine_key = vim.eval("g:vim_codestats_key")
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "vim_codestats",
-        "X-API-Token": machine_key,
-        "Accept": "*/*"
-    }
+        # acquire the lock to get the list of xp to send
+        self.sem.acquire()
+        xp_list = [ dict(language=ft, xp=xp) for ft,xp in self.xp_dict.items() ]
+        self.xp_dict = { }
+        self.sem.release()
 
-    # after lock is released we can send the payload
-    utc_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond = 0).astimezone().isoformat()
-    pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
-    requests.post(url = url, data = pulse_json, headers = headers)
+        url = vim.eval("g:vim_codestats_url")
+        if url is None:
+            return
 
-def running_thread():
-    # loop and push out stats at regular interval
-    send_xp()
-    global timer
-    timer = threading.Timer(INTERVAL, running_thread)
-    timer.start()
+        if url.endswith('/') == False:
+            url = url + '/'
+        url = url + 'api/my/pulses'
+        machine_key = vim.eval("g:vim_codestats_key")
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "vim_codestats",
+            "X-API-Token": machine_key,
+            "Accept": "*/*"
+        }
 
-def start_cs_thread():
-    running_thread()
+        # after lock is released we can send the payload
+        utc_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond = 0).astimezone().isoformat()
+        pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
+        r = requests.post(url = url, data = pulse_json, headers = headers)
 
-def exit_cs_thread():
-    if timer is not None:
-        timer.cancel()
-        send_xp()
+    # main thread, needs to be able to send XP at an interval
+    # and also be able to stop when vim is exited without
+    # pausing until the interval is done
+    def main_thread(self):
+        while True:
+            cur_time = 0
+            while cur_time < INTERVAL:
+                time.sleep(SLEEP_INTERVAL)
+                cur_time += SLEEP_INTERVAL 
+
+            self.send_xp()
+
+    def exit(self):
+        self.send_xp()
+
+# plugin startup.  Need to allow for vimrc getting reloaded and
+# this module getting restarted, potentially with pending xp
+if __name__ == "__main__":
+    xp_dict = {}
+    # allow reentrancy
+    if 'codestats' in globals():
+        xp_dict = codestats.xp_dict
+        del(codestats)
+
+    codestats = CodeStats(xp_dict)
