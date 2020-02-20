@@ -2,7 +2,7 @@
 
 A vim plugin for [CodeStats](http://codestats.net)
 
-This plugin requires Python 3.  It makes use of the InsertCharPre autocommand in order to track keystrokes.  It uses threading (and not multiprocessing) so that it should work across all platforms (including windows).
+This plugin requires Python 3.  It also requires the [requests](https://requests.readthedocs.io/en/master/) library.  It makes use of the InsertCharPre autocommand in order to track keystrokes.  It uses threading (and not multiprocessing) so that it should work across all platforms (including windows).
 
 You should be able to use your typical vim plugin manager in order to install.  I use [Pathogen](https://github.com/tpope/vim-pathogen) although I'm sure other managers should work just fine.
 
