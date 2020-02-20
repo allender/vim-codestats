@@ -46,9 +46,11 @@ filetype_map = {
 }
 
 BETA_URL = 'https://beta.codestats.net'
-INTERVAL = 10
-SLEEP_INTERVAL = 0.1
-VERSION = '1.0.0'
+
+INTERVAL = 10                # interval at which stats are sent
+SLEEP_INTERVAL = 0.1         # sleep interval so that we can basically timeslice to see if we need to exit
+VERSION = '1.0.0'            # versioning
+TIMEOUT = 2                  # request timeout value (in seconds)
 
 # semaphore needed to protect the dictionary
 
@@ -75,7 +77,7 @@ class CodeStats():
             self.xp_dict[language_type] = count + xp
             self.sem.release()
 
-    def send_xp(self):
+    def send_xp(self, exiting = False):
         if len(self.xp_dict) == 0:
             return
 
@@ -103,7 +105,25 @@ class CodeStats():
         # after lock is released we can send the payload
         utc_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond = 0).astimezone().isoformat()
         pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
-        r = requests.post(url = url, data = pulse_json, headers = headers)
+        error = '' 
+        try:
+            r = requests.post(url = url, data = pulse_json, headers = headers, timeout = TIMEOUT)
+            r.raise_for_status()
+        except requests.ConnectionError as e:
+            error = 'Unable to connect to server'
+        except requests.Timeout as e:
+            error = 'Request timeout after {0}s'.format(TIMEOUT)
+        except requests.TooManyRedirects as e:
+            error = 'Too many redirects'
+        except requests.HTTPError as e:
+            error = '{0}'.format(e)
+        except:
+            error = 'unknown error'
+
+        # hacky way to get around exiting and not needing to set the error
+        if exiting is False and error is not '':
+            vim.command('call codestats#set_error({0})'.format(error))
+
 
     # main thread, needs to be able to send XP at an interval
     # and also be able to stop when vim is exited without
@@ -118,7 +138,7 @@ class CodeStats():
             self.send_xp()
 
     def exit(self):
-        self.send_xp()
+        self.send_xp(exiting = True)
 
 # plugin startup.  Need to allow for vimrc getting reloaded and
 # this module getting restarted, potentially with pending xp

@@ -48,6 +48,16 @@ function! s:enter_buf()
 	endif
 endfunction
 
+function! codestats#set_error(error)
+	if a:error == ''
+		if exists("g:vim_codestats_error")
+			unlet g:vim_codestats_error
+		endif
+	else
+		let g:codestats_error = error
+	endif
+endfunction
+
 " autocommands to keep track of code stats
 augroup codestats
     autocmd!
@@ -59,6 +69,9 @@ augroup codestats
 augroup END
 
 function! CodeStatsXP()
-	return 'CS: ' . b:current_xp
+	if exists("g:vim_codestats_error")
+		return "C::S ERR"
+	endif
+	return 'C::S ' . b:current_xp
 endfunction
 
