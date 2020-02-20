@@ -24,8 +24,6 @@ let s:module_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
 " load up the python file
 execute 'py3file ' . s:module_path . '/codestats_request.py'
 
-let b:current_xp = 0
-
 " function to send xp - done on buffer write
 function! s:send_xp()
 	execute 'python3 codestats.add_xp("' . &filetype . '", ' . b:current_xp ')'
@@ -42,6 +40,14 @@ function! s:exit()
 	execute 'python3 codestats.exit()'
 endfunction
 
+" set xp to 0 when entering any buffer if
+" it's not already set
+function! s:enter_buf()
+	if !exists("b:current_xp")
+		let b:current_xp = 0
+	endif
+endfunction
+
 " autocommands to keep track of code stats
 augroup codestats
     autocmd!
@@ -49,6 +55,7 @@ augroup codestats
     autocmd TextChanged * call s:add_xp()
     autocmd VimLeavePre * call s:exit()
 	autocmd BufWrite * call s:send_xp()
+	autocmd BufEnter * call s:enter_buf()
 augroup END
 
 function! CodeStatsXP()
