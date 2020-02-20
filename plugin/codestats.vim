@@ -2,10 +2,23 @@
 " Vim side file to integrate support for codestats.net
 "
 
+" get the module path where the python file is located
+let s:module_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
+
 " check for python 3.  Right now that is what is supported
 if !has('python3')
-	echomsg 'Python3 support required for vim-codestats'
-	finish
+	if !has('python')
+		echomsg 'Python2/3 support required for vim-codestats'
+		finish
+	endif
+	let s:python = 'python'
+
+	" load up the python file
+	execute 'pyfile ' . s:module_path . '/codestats_request.py'
+else
+	let s:python = 'python3'
+	" load up the python file
+	execute 'py3file ' . s:module_path . '/codestats_request.py'
 endif
 
 " check for variables that are needed and only
@@ -18,15 +31,9 @@ if !exists("g:vim_codestats_key")
 	let g:vim_codestats_key = ''
 endif
 
-" get the module path there the python file is located
-let s:module_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
-
-" load up the python file
-execute 'py3file ' . s:module_path . '/codestats_request.py'
-
 " function to send xp - done on buffer write
 function! s:send_xp()
-	execute 'python3 codestats.add_xp("' . &filetype . '", ' . b:current_xp ')'
+	execute s:python . ' codestats.add_xp("' . &filetype . '", ' . b:current_xp ')'
 	let b:current_xp = 0
 endfunction
 
@@ -37,7 +44,7 @@ endfunction
 
 " local function to exit (which will send any remaining xp)
 function! s:exit()
-	execute 'python3 codestats.exit()'
+	execute s:python . ' codestats.exit()'
 endfunction
 
 " set xp to 0 when entering any buffer if
@@ -74,4 +81,3 @@ function! CodeStatsXP()
 	endif
 	return 'C::S ' . b:current_xp
 endfunction
-

@@ -45,6 +45,22 @@ filetype_map = {
     "zsh":                "Shell Script (Zsh)",
 }
 
+# code for timezone/UTC so it will work in
+# python 2 and 3
+ZERO = datetime.timedelta(0)
+
+class UTC(datetime.tzinfo):
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
+utc = UTC()
+
 BETA_URL = 'https://beta.codestats.net'
 
 INTERVAL = 10                # interval at which stats are sent
@@ -60,7 +76,8 @@ class CodeStats():
         self.sem = threading.Semaphore()
 
         # start the main thread
-        self.cs_thread = threading.Thread(target = self.main_thread, args = (), daemon = True)
+        self.cs_thread = threading.Thread(target = self.main_thread, args = ())
+        self.cs_thread.daemon = True
         self.cs_thread.start()
 
     def add_xp(self, filetype, xp):
@@ -103,7 +120,7 @@ class CodeStats():
         }
 
         # after lock is released we can send the payload
-        utc_now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond = 0).astimezone().isoformat()
+        utc_now = datetime.datetime.now(utc).replace(microsecond = 0).isoformat()
         pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
         error = '' 
         try:
