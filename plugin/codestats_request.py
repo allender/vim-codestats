@@ -48,6 +48,7 @@ filetype_map = {
 BETA_URL = 'https://beta.codestats.net'
 INTERVAL = 10
 SLEEP_INTERVAL = 0.1
+VERSION = '1.0.0'
 
 # semaphore needed to protect the dictionary
 
@@ -93,10 +94,10 @@ class CodeStats():
         url = url + 'api/my/pulses'
         machine_key = vim.eval("g:vim_codestats_key")
         headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "vim_codestats",
-            "X-API-Token": machine_key,
-            "Accept": "*/*"
+            'Content-Type': 'application/json',
+            'User-Agent': 'vim_codestats/{0}'.format(VERSION),
+            'X-API-Token': machine_key,
+            'Accept': '*/*'
         }
 
         # after lock is released we can send the payload
