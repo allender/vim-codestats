@@ -8,8 +8,15 @@ if !has('python3')
 	finish
 endif
 
-let g:vim_codestats_url = 'https://codestats.net/'
-let g:vim_codestats_key = ''
+" check for variables that are needed and only
+" assign them if they are not already assigned
+if !exists("g:vim_codestats_url")
+	let g:vim_codestats_url = 'https://codestats.net/'
+endif
+
+if !exists("g:vim_codestats_key")
+	let g:vim_codestats_key = ''
+endif
 
 " get the module path there the python file is located
 let s:module_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
