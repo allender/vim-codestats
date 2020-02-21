@@ -16,22 +16,7 @@ if codestats_path not in sys.path:
     sys.path.append(codestats_path)
     
 from codestats_filetypes import filetype_map
-
-# code for timezone/UTC so it will work in
-# python 2 and 3
-ZERO = datetime.timedelta(0)
-
-class UTC(datetime.tzinfo):
-    def utcoffset(self, dt):
-        return ZERO
-
-    def tzname(self, dt):
-        return "UTC"
-
-    def dst(self, dt):
-        return ZERO
-
-utc = UTC()
+from localtz import LOCAL_TZ
 
 BETA_URL = 'https://beta.codestats.net'
 
@@ -92,7 +77,8 @@ class CodeStats():
         }
 
         # after lock is released we can send the payload
-        utc_now = datetime.datetime.now(utc).replace(microsecond = 0).isoformat()
+        utc_now = datetime.datetime.now().replace(microsecond = 0, tzinfo = LOCAL_TZ).isoformat()
+        print (utc_now)
         pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
         error = '' 
         try:
