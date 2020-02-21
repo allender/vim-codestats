@@ -1,13 +1,21 @@
-# importing the requests library 
-import requests 
 import datetime
 import json
+import os.path
+import sys
 import threading
 import time 
 import vim
-import os.path
-import inspect
-import sys
+
+from ssl import CertificateError
+
+# Python 2 and 3 have different modules for urllib2
+try:
+    from urllib.request import Request, urlopen, build_opener, ProxyHandler
+    from urllib.error import URLError
+    from http.client import HTTPException
+except ImportError:
+    from urllib2 import Request, urlopen, URLError, build_opener, ProxyHandler
+    from httplib import HTTPException
 
 # because of vim, we need to get the current folder
 # into the path to load other modules
@@ -18,14 +26,19 @@ if codestats_path not in sys.path:
 from codestats_filetypes import filetype_map
 from localtz import LOCAL_TZ
 
-BETA_URL = 'https://beta.codestats.net'
-
+# globals
 INTERVAL = 10                # interval at which stats are sent
 SLEEP_INTERVAL = 0.1         # sleep interval so that we can basically timeslice to see if we need to exit
 VERSION = '1.0.0'            # versioning
 TIMEOUT = 2                  # request timeout value (in seconds)
 
-# semaphore needed to protect the dictionary
+# Getting proxies with multiprocessing is buggy on MacOS, so disable them
+# https://gitlab.com/code-stats/code-stats-vim/issues/8
+# https://bugs.python.org/issue30837
+if sys.platform == "darwin":
+    _urlopen = build_opener(ProxyHandler({})).open
+else:
+    _urlopen = urlopen
 
 class CodeStats():
     def __init__(self, xp_dict):
@@ -78,23 +91,26 @@ class CodeStats():
 
         # after lock is released we can send the payload
         utc_now = datetime.datetime.now().replace(microsecond = 0, tzinfo = LOCAL_TZ).isoformat()
-        print (utc_now)
         pulse_json = json.dumps({"coded_at":'{0}'.format(utc_now), "xps": xp_list}).encode('utf-8')
-        error = '' 
+        req = Request(url=url, data = pulse_json, headers = headers)
+        error = ''
         try:
-            r = requests.post(url = url, data = pulse_json, headers = headers, timeout = TIMEOUT)
-            r.raise_for_status()
-        except requests.ConnectionError as e:
-            error = 'Unable to connect to server'
-        except requests.Timeout as e:
-            error = 'Request timeout after {0}s'.format(TIMEOUT)
-        except requests.TooManyRedirects as e:
-            error = 'Too many redirects'
-        except requests.HTTPError as e:
-            error = '{0}'.format(e)
-        except:
-            error = 'unknown error'
-
+            response = _urlopen(req, timeout=5)
+            response.read()
+            # connection might not be closed without .read()
+        except URLError as e:
+            try:
+                # HTTP error
+                error = '{0} {1}'.format(e.code, e.read().decode("utf-8"))
+            except AttributeError:
+                # non-HTTP error, eg. no network
+                error = e.reason
+        except CertificateError as e:
+            # SSL certificate error (eg. a public wifi redirects traffic)
+            error = e
+        except HTTPException as e:
+            error = 'HTTPException on send data. Msg: {0}\nDoc?:{1}'.format(e.message, e.__doc__)
+        
         # hacky way to get around exiting and not needing to set the error
         if exiting is False and error is not '':
             vim.command('call codestats#set_error({0})'.format(error))
