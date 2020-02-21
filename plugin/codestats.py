@@ -76,14 +76,14 @@ class CodeStats():
         self.xp_dict = { }
         self.sem.release()
 
-        url = vim.eval("g:vim_codestats_url")
+        url = vim.eval("g:codestats_api_url")
         if url is None:
             return
 
         if url.endswith('/') == False:
             url = url + '/'
         url = url + 'api/my/pulses'
-        machine_key = vim.eval("g:vim_codestats_key")
+        machine_key = vim.eval("g:codestats_api_key")
         headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'vim_codestats/{0}'.format(VERSION),

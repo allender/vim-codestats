@@ -2,6 +2,12 @@
 " Vim side file to integrate support for codestats.net
 "
 
+" define external function to do nothign
+" in case module doesn't initialize properly
+function! CodeStatsXP()
+	return 'C::S Not Initialized'
+endfunction
+
 " get the module path where the python file is located
 let s:codestats_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
 
@@ -23,12 +29,12 @@ endif
 
 " check for variables that are needed and only
 " assign them if they are not already assigned
-if !exists("g:vim_codestats_url")
-	let g:vim_codestats_url = 'https://codestats.net/'
+if !exists("g:codestats_api_url")
+	let g:codestats_api_url = 'https://codestats.net/'
 endif
 
-if !exists("g:vim_codestats_key")
-	let g:vim_codestats_key = ''
+if !exists("g:codestats_api_key")
+	let g:codestats_api_key = ''
 endif
 
 " function to send xp - done on buffer write
