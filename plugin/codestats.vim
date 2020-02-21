@@ -3,7 +3,7 @@
 "
 
 " get the module path where the python file is located
-let s:module_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
+let s:codestats_path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
 
 " check for python 3.  Right now that is what is supported
 if !has('python3')
@@ -14,11 +14,11 @@ if !has('python3')
 	let s:python = 'python'
 
 	" load up the python file
-	execute 'pyfile ' . s:module_path . '/codestats_request.py'
+	execute 'pyfile ' . s:codestats_path . '/codestats.py'
 else
 	let s:python = 'python3'
 	" load up the python file
-	execute 'py3file ' . s:module_path . '/codestats_request.py'
+	execute 'py3file ' . s:codestats_path . '/codestats.py'
 endif
 
 " check for variables that are needed and only

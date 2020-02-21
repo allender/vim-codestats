@@ -5,45 +5,17 @@ import json
 import threading
 import time 
 import vim
+import os.path
+import inspect
+import sys
 
-filetype_map = {
-    "c":                  "C/C++",
-    "cs":                 "C#",
-    "cmake":              "CMake",
-    "cpp":                "C/C++",
-    "css":                "CSS",
-    "elixir":             "Elixir",
-    "erlang":             "Erlang",
-    "go":                 "Go",
-    "h":                  "C/C++",
-    "haskell":            "Haskell",
-    "html":               "HTML",
-    "hpp":                "C/C++",
-    "java":               "Java",
-    "javascript":         "JavaScript",
-    "json":               "JSON",
-    "markdown":           "Markdown",
-    "objc":               "Objective-C",
-    "objcpp":             "Objective-C++",
-    "ocaml":              "OCaml",
-    "pascal":             "Pascal",
-    "perl":               "Perl",
-    "php":                "PHP",
-    "plsql":              "PL/SQL",
-    "python":             "Python",
-    "ruby":               "Ruby",
-    "rust":               "Rust",
-    "scala":              "Scala",
-    "scheme":             "Scheme",
-    "sh":                 "Shell Script",
-    "tcsh":               "Shell Script (tcsh)",
-    "typescript":         "TypeScript",
-    "vb":                 "Visual Basic",
-    "vbnet":              "Visual Basic .NET",
-    "vim":                "VimL",
-    "yaml":               "YAML",
-    "zsh":                "Shell Script (Zsh)",
-}
+# because of vim, we need to get the current folder
+# into the path to load other modules
+codestats_path = vim.eval('s:codestats_path')
+if codestats_path not in sys.path:
+    sys.path.append(codestats_path)
+    
+from codestats_filetypes import filetype_map
 
 # code for timezone/UTC so it will work in
 # python 2 and 3
